@@ -25,7 +25,7 @@ module.exports = (grunt) ->
     browserify:
       dist:
         files:
-          'dist/<%= config.filename %>.js':['lib/index.js']
+          'dist/<%= config.filename %>.js':['lib/<%= config.filename %>.js']
         options:
           transform: ['browserify-shim']
           bundleOptions:
