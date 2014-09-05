@@ -2,6 +2,21 @@
 
 Adds an extender to a knockout object that allows you to validate its values and obtain the errors.
 
+# Extender
+
+- receives validation description as a parameter, eg:
+
+```
+
+name = ko.observable().extend
+  validation: {notEmpty:{message: "Hello world!!"}}
+
+name.validate (isValid)->
+  name.getAllErrors() # ["Hello World !!!"]
+```
+
+
+
 # Install
 
 ``npm install knockout-validations-extender --save``
@@ -151,20 +166,6 @@ ko.applyBindings(registration)
 ```
 
 
-
-# Extender
-
-- receives validation description as a parameter, eg:
-
-```
-
-name = ko.observable().extend
-  validation: {notEmpty:{message: "Hello world!!"}}
-
-name.validate()
-name.getAllErrors() # ["Hello World !!!"]
-```
-
 # Error Concepts
 
 Each knockout object can have:
@@ -214,10 +215,12 @@ You can override the default error message by passing as a validation option in 
 - observable.resetValidation()
 
 - observable.hasValidation(name)
-  + returns true if the observable contains that validation
+  + returns computed that returns true if the observable contains that validation
 - observable.validation(name, options)
   + adds a new validation to observable
   + if its live, it should trigger a new validation
+- observable.removeValidation(name)
+  + removes validation
 
 # Extender Modes (Available extenders)
 

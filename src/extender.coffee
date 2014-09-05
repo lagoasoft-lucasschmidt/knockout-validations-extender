@@ -89,7 +89,13 @@ module.exports = (options)->
 
     # utils
 
-    target.hasValidation = (rule)-> rules[rule]?
+    target.hasValidation = (rule)-> ko.computed ()-> rules()[rule]?
+
+    target.removeValidation = (rule)->
+      allRules = rules()
+      delete allRules[rule]
+      rules(allRules)
+      return target
 
     target.validation = (newRule, options)->
       if !newRule then return target
