@@ -1,6 +1,6 @@
 {
   "name": "knockout-validations-extender",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "knockout validations extender that allows you to perform validations in view models and their nested observables.",
   "main": "lib/knockout-validations-extender.js",
   "scripts": {
