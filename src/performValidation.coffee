@@ -86,11 +86,11 @@ createValidationPromise = (rule, ruleOptions, validationMethods, observableValue
   else if _.isFunction ruleOptsOrFn?.fn
     async = ruleOptsOrFn.async or false
     if !async
-      return Promise.fcall ruleOptsOrFn,
+      return Promise.fcall ruleOptsOrFn.fn,
         value: observableValue
         validationOptions: ruleOptions
     else
-      return Promise.nfcall ruleOptsOrFn,
+      return Promise.nfcall ruleOptsOrFn.fn,
         value: observableValue
         validationOptions: ruleOptions
   else

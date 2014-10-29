@@ -22,7 +22,6 @@
   },
   "homepage": "https://github.com/lucastschmidt/knockout-validations-extender",
   "dependencies": {
-    "grunt-contrib-uglify": "^0.5.1",
     "knockout": "^3.1.0",
     "lodash": "^2.4.1",
     "loglevel": "^1.2.0",
