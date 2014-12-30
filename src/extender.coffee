@@ -7,6 +7,7 @@ module.exports = (options)->
   live = options?.live or false
   alwaysLive = options?.alwaysLive or false
   getValidationMethods = options.getValidationMethods
+  translator = options?.translator
 
   return (target, rules)->
     hasLiveStarted = false
@@ -83,6 +84,7 @@ module.exports = (options)->
         children: children()
         resetValidation: opts?.reset or false
         validateChildren: opts?.validateChildren or true
+        translator: translator
       ), (ownErrors)->
         ownCalculatedErrors _.uniq(ownErrors)
         cb(target.isValid())

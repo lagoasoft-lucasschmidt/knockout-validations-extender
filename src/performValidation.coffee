@@ -10,6 +10,7 @@ defaultValidationObservableOptions =
 module.exports = performValidation = (options, callback)->
 
   validationMethods = options?.validationMethods or {}
+  translator = options?.translator or throw new Error("translator should have been set")
   defaultMessage = options?.defaultMessage or "Field is not valid"
   rules = options?.rules or {}
   target = options?.target or throw new Error("target is required")
@@ -21,7 +22,7 @@ module.exports = performValidation = (options, callback)->
   if resetValidation then target.resetValidation()
 
   promises = []
-  promises.push performOwnValidations(rules, validationMethods, observableValue, defaultMessage)
+  promises.push performOwnValidations(rules, validationMethods, observableValue, defaultMessage, translator)
 
   if validateChildren
     promises.push performChildrenValidations(children, resetValidation)
@@ -37,7 +38,7 @@ module.exports = performValidation = (options, callback)->
     callback [defaultMessage]
   .done()
 
-performOwnValidations = (rules, validationMethods, observableValue, defaultMessage)->
+performOwnValidations = (rules, validationMethods, observableValue, defaultMessage, translator)->
   observableOptions = _.clone(defaultValidationObservableOptions)
   if _.isObject rules?.options
     observableOptions = _.extend observableOptions, rules.options
@@ -57,7 +58,8 @@ performOwnValidations = (rules, validationMethods, observableValue, defaultMessa
     else
       return promise.then (result)->
         if !result
-          errors.push ruleOptions?.message or validationMethods[rule]?.defaultMessage or defaultMessage
+          msg = ruleOptions?.message or validationMethods[rule]?.defaultMessage or defaultMessage
+          errors.push translator(msg, ruleOptions)
         if errors?.length and observableOptions.stopOnFirstError
           return newPromise()
         else return executeNextValidation()

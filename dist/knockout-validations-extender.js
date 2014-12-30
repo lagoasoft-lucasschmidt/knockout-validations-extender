@@ -11,10 +11,11 @@ utils = _dereq_('./utils');
 performValidation = _dereq_('./performValidation');
 
 module.exports = function(options) {
-  var alwaysLive, getValidationMethods, live;
+  var alwaysLive, getValidationMethods, live, translator;
   live = (options != null ? options.live : void 0) || false;
   alwaysLive = (options != null ? options.alwaysLive : void 0) || false;
   getValidationMethods = options.getValidationMethods;
+  translator = options != null ? options.translator : void 0;
   return function(target, rules) {
     var allCalculatedErrors, allErrors, allManualErrors, children, childrenCalculatedErrors, childrenErrors, childrenManualErrors, hasLiveStarted, isValid, ownCalculatedErrors, ownErrors, ownManualErrors;
     hasLiveStarted = false;
@@ -107,7 +108,8 @@ module.exports = function(options) {
         target: target,
         children: children(),
         resetValidation: (opts != null ? opts.reset : void 0) || false,
-        validateChildren: (opts != null ? opts.validateChildren : void 0) || true
+        validateChildren: (opts != null ? opts.validateChildren : void 0) || true,
+        translator: translator
       }, function(ownErrors) {
         ownCalculatedErrors(_.uniq(ownErrors));
         return cb(target.isValid());
@@ -159,7 +161,7 @@ module.exports = function(options) {
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./performValidation":3,"./utils":4}],2:[function(_dereq_,module,exports){
 (function (global){
-var basicOptions, defaultMessage, extender, ko, validationMethods, _;
+var basicOptions, defaultMessage, extender, ko, translatorFn, validationMethods, _;
 
 ko = (typeof window !== "undefined" ? window.ko : typeof global !== "undefined" ? global.ko : null);
 
@@ -171,6 +173,10 @@ validationMethods = {};
 
 defaultMessage = "Field is not valid";
 
+translatorFn = function(m) {
+  return m;
+};
+
 module.exports.registerValidationMethods = function(otherValidationMethods) {
   validationMethods = _.extend(validationMethods, otherValidationMethods);
   return module.exports;
@@ -181,11 +187,18 @@ module.exports.setDefaultMessage = function(msg) {
   return module.exports;
 };
 
+module.exports.setTranslator = function(fn) {
+  return translatorFn = fn;
+};
+
 basicOptions = {
   getValidationMethods: function() {
     return validationMethods;
   },
-  live: false
+  live: false,
+  translator: function(m, validationOptions) {
+    return translatorFn(m, validationOptions);
+  }
 };
 
 ko.extenders.validations = extender(basicOptions);
@@ -219,8 +232,11 @@ defaultValidationObservableOptions = {
 };
 
 module.exports = performValidation = function(options, callback) {
-  var children, defaultMessage, observableValue, promises, resetValidation, rules, target, validateChildren, validationMethods;
+  var children, defaultMessage, observableValue, promises, resetValidation, rules, target, translator, validateChildren, validationMethods;
   validationMethods = (options != null ? options.validationMethods : void 0) || {};
+  translator = (options != null ? options.translator : void 0) || (function() {
+    throw new Error("translator should have been set");
+  })();
   defaultMessage = (options != null ? options.defaultMessage : void 0) || "Field is not valid";
   rules = (options != null ? options.rules : void 0) || {};
   target = (options != null ? options.target : void 0) || (function() {
@@ -234,7 +250,7 @@ module.exports = performValidation = function(options, callback) {
     target.resetValidation();
   }
   promises = [];
-  promises.push(performOwnValidations(rules, validationMethods, observableValue, defaultMessage));
+  promises.push(performOwnValidations(rules, validationMethods, observableValue, defaultMessage, translator));
   if (validateChildren) {
     promises.push(performChildrenValidations(children, resetValidation));
   } else {
@@ -254,7 +270,7 @@ module.exports = performValidation = function(options, callback) {
   })(this)).done();
 };
 
-performOwnValidations = function(rules, validationMethods, observableValue, defaultMessage) {
+performOwnValidations = function(rules, validationMethods, observableValue, defaultMessage, translator) {
   var errors, executeNextValidation, observableOptions, rule, ruleOptions, stack;
   observableOptions = _.clone(defaultValidationObservableOptions);
   if (_.isObject(rules != null ? rules.options : void 0)) {
@@ -286,9 +302,10 @@ performOwnValidations = function(rules, validationMethods, observableValue, defa
       return executeNextValidation();
     } else {
       return promise.then(function(result) {
-        var _ref;
+        var msg, _ref;
         if (!result) {
-          errors.push((ruleOptions != null ? ruleOptions.message : void 0) || ((_ref = validationMethods[rule]) != null ? _ref.defaultMessage : void 0) || defaultMessage);
+          msg = (ruleOptions != null ? ruleOptions.message : void 0) || ((_ref = validationMethods[rule]) != null ? _ref.defaultMessage : void 0) || defaultMessage;
+          errors.push(translator(msg, ruleOptions));
         }
         if ((errors != null ? errors.length : void 0) && observableOptions.stopOnFirstError) {
           return newPromise();
@@ -459,39 +476,38 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
 
     function realMethod(methodName) {
         if (typeof console === undefinedType) {
+            return false; // We can't build a real method without a console to log to
+        } else if (console[methodName] !== undefined) {
+            return bindMethod(console, methodName);
+        } else if (console.log !== undefined) {
+            return bindMethod(console, 'log');
+        } else {
             return noop;
-        } else if (console[methodName] === undefined) {
-            if (console.log !== undefined) {
-                return boundToConsole(console, 'log');
-            } else {
-                return noop;
-            }
-        } else {
-            return boundToConsole(console, methodName);
         }
     }
 
-    function boundToConsole(console, methodName) {
-        var method = console[methodName];
-        if (method.bind === undefined) {
-            if (Function.prototype.bind === undefined) {
-                return functionBindingWrapper(method, console);
-            } else {
-                try {
-                    return Function.prototype.bind.call(console[methodName], console);
-                } catch (e) {
-                    // In IE8 + Modernizr, the bind shim will reject the above, so we fall back to wrapping
-                    return functionBindingWrapper(method, console);
-                }
-            }
+    function bindMethod(obj, methodName) {
+        var method = obj[methodName];
+        if (typeof method.bind === 'function') {
+            return method.bind(obj);
         } else {
-            return console[methodName].bind(console);
+            try {
+                return Function.prototype.bind.call(method, obj);
+            } catch (e) {
+                // Missing bind shim or IE8 + Modernizr, fallback to wrapping
+                return function() {
+                    return Function.prototype.apply.apply(method, [obj, arguments]);
+                };
+            }
         }
     }
 
-    function functionBindingWrapper(f, context) {
-        return function() {
-            Function.prototype.apply.apply(f, [context, arguments]);
+    function enableLoggingWhenConsoleArrives(methodName, level) {
+        return function () {
+            if (typeof console !== undefinedType) {
+                replaceLoggingMethods(level);
+                self[methodName].apply(self, arguments);
+            }
         };
     }
 
@@ -503,71 +519,39 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
         "error"
     ];
 
-    function replaceLoggingMethods(methodFactory) {
-        for (var ii = 0; ii < logMethods.length; ii++) {
-            self[logMethods[ii]] = methodFactory(logMethods[ii]);
-        }
-    }
-
-    function cookiesAvailable() {
-        return (typeof window !== undefinedType &&
-                window.document !== undefined &&
-                window.document.cookie !== undefined);
-    }
-
-    function localStorageAvailable() {
-        try {
-            return (typeof window !== undefinedType &&
-                    window.localStorage !== undefined &&
-                    window.localStorage !== null);
-        } catch (e) {
-            return false;
+    function replaceLoggingMethods(level) {
+        for (var i = 0; i < logMethods.length; i++) {
+            var methodName = logMethods[i];
+            self[methodName] = (i < level) ? noop : self.methodFactory(methodName, level);
         }
     }
 
     function persistLevelIfPossible(levelNum) {
-        var localStorageFail = false,
-            levelName;
+        var levelName = (logMethods[levelNum] || 'silent').toUpperCase();
 
-        for (var key in self.levels) {
-            if (self.levels.hasOwnProperty(key) && self.levels[key] === levelNum) {
-                levelName = key;
-                break;
-            }
-        }
+        // Use localStorage if available
+        try {
+            window.localStorage['loglevel'] = levelName;
+            return;
+        } catch (ignore) {}
 
-        if (localStorageAvailable()) {
-            /*
-             * Setting localStorage can create a DOM 22 Exception if running in Private mode
-             * in Safari, so even if it is available we need to catch any errors when trying
-             * to write to it
-             */
-            try {
-                window.localStorage['loglevel'] = levelName;
-            } catch (e) {
-                localStorageFail = true;
-            }
-        } else {
-            localStorageFail = true;
-        }
-
-        if (localStorageFail && cookiesAvailable()) {
+        // Use session cookie as fallback
+        try {
             window.document.cookie = "loglevel=" + levelName + ";";
-        }
+        } catch (ignore) {}
     }
-
-    var cookieRegex = /loglevel=([^;]+)/;
 
     function loadPersistedLevel() {
         var storedLevel;
 
-        if (localStorageAvailable()) {
+        try {
             storedLevel = window.localStorage['loglevel'];
-        }
+        } catch (ignore) {}
 
-        if (storedLevel === undefined && cookiesAvailable()) {
-            var cookieMatch = cookieRegex.exec(window.document.cookie) || [];
-            storedLevel = cookieMatch[1];
+        if (typeof storedLevel === undefinedType) {
+            try {
+                storedLevel = /loglevel=([^;]+)/.exec(window.document.cookie)[1];
+            } catch (ignore) {}
         }
         
         if (self.levels[storedLevel] === undefined) {
@@ -586,36 +570,21 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
     self.levels = { "TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3,
         "ERROR": 4, "SILENT": 5};
 
+    self.methodFactory = function (methodName, level) {
+        return realMethod(methodName) ||
+               enableLoggingWhenConsoleArrives(methodName, level);
+    };
+
     self.setLevel = function (level) {
+        if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) {
+            level = self.levels[level.toUpperCase()];
+        }
         if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) {
             persistLevelIfPossible(level);
-
-            if (level === self.levels.SILENT) {
-                replaceLoggingMethods(function () {
-                    return noop;
-                });
-                return;
-            } else if (typeof console === undefinedType) {
-                replaceLoggingMethods(function (methodName) {
-                    return function () {
-                        if (typeof console !== undefinedType) {
-                            self.setLevel(level);
-                            self[methodName].apply(self, arguments);
-                        }
-                    };
-                });
+            replaceLoggingMethods(level);
+            if (typeof console === undefinedType && level < self.levels.SILENT) {
                 return "No console available for logging";
-            } else {
-                replaceLoggingMethods(function (methodName) {
-                    if (level <= self.levels[methodName.toUpperCase()]) {
-                        return realMethod(methodName);
-                    } else {
-                        return noop;
-                    }
-                });
             }
-        } else if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) {
-            self.setLevel(self.levels[level.toUpperCase()]);
         } else {
             throw "log.setLevel() called with invalid level: " + level;
         }
@@ -649,7 +618,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
   var now = typeof setImmediate !== 'undefined' ? setImmediate : function(cb) {
     setTimeout(cb, 0)
   }
-  
+
   /**
    * @constructor
    */
@@ -766,7 +735,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
       self.fire()
     }, function (v) {
       self.val = v
-      
+
       if (self.state === 'resolving' && typeof self.fn === 'function') {
         try {
           self.val = self.fn.call(undefined, self.val)
@@ -806,7 +775,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
   }
 
   promise.prototype.done = function () {
-    if (this.state = 'rejected' && !this.next) {
+    if (this.state === 'rejected') {
       throw this.val
     }
     return null
@@ -843,7 +812,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
       return typeof fn === 'function' && fn.apply(null, list)
     }, er)
   }
-  
+
   promise.prototype.all = function() {
     var self = this
     return this.then(function(list){
@@ -852,25 +821,25 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
         p.reject(TypeError)
         return p
       }
-      
+
       var cnt = 0
       var target = list.length
-      
+
       function done() {
         if (++cnt === target) p.resolve(list)
       }
-      
+
       for(var i=0, l=list.length; i<l; i++) {
         var value = list[i]
         var ref;
-        
+
         try {
           ref = value && value.then
         } catch (e) {
           p.reject(e)
           break
         }
-        
+
         (function(i){
           self.thennable(ref, function(val){
             list[i] = val
@@ -933,7 +902,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
       return def
     }
   }
-  
+
   // Export our library object, either for node.js or as a globally scoped variable
   if (typeof module !== 'undefined') {
     module.exports = promiz
@@ -941,6 +910,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
     self.Promiz = promiz
   }
 })()
+
 },{}]},{},[2])
 (2)
 });

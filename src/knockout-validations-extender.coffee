@@ -8,6 +8,7 @@ validationMethods = {}
 
 defaultMessage = "Field is not valid"
 
+translatorFn = (m)-> m
 
 # external API
 
@@ -19,11 +20,14 @@ module.exports.setDefaultMessage = (msg)->
   defaultMessage = msg
   return module.exports
 
+module.exports.setTranslator = (fn)-> translatorFn = fn
+
 # register extenders
 
 basicOptions =
   getValidationMethods: ()-> return validationMethods
   live: false
+  translator: (m, validationOptions)-> translatorFn(m, validationOptions)
 
 ko.extenders.validations = extender basicOptions
 

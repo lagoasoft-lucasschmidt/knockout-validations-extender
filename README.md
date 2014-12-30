@@ -280,4 +280,11 @@ b) Can be an object
     defaultMessage: "Field should be required!"
 ```
 
+## 4 - Translate Messages
 
+If you wish to translate the error messages, you can give a function to koValidation.
+
+```
+koValidation.setTranslator (message, ruleOptions)->
+  return message.replace('{{max}}', ruleOptions.max)
+```
