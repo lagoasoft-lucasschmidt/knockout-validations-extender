@@ -241,6 +241,7 @@ The validations you register are an object that maps a ``validationName`` to a `
 - ``validationFunction`` returns a boolean, receives a single ``data`` parameter, where ``data`` contains:
   + value (the actual value to validate)
   + validationOptions (the options configured for this observable/validation by you)
+  + parent (parent observable that called the validate method)
 
 ```
 koValidations = require 'knockout-validations-extender'

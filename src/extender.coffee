@@ -85,6 +85,7 @@ module.exports = (options)->
         resetValidation: opts?.reset or false
         validateChildren: opts?.validateChildren or true
         translator: translator
+        parent: opts?.parent or null
       ), (ownErrors)->
         ownCalculatedErrors _.uniq(ownErrors)
         cb(target.isValid())

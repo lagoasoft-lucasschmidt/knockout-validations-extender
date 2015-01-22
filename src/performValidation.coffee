@@ -18,14 +18,15 @@ module.exports = performValidation = (options, callback)->
   children = options?.children or []
   resetValidation = options?.resetValidation
   validateChildren = options?.validateChildren
+  parent = options?.parent
 
   if resetValidation then target.resetValidation()
 
   promises = []
-  promises.push performOwnValidations(rules, validationMethods, observableValue, defaultMessage, translator)
+  promises.push performOwnValidations(rules, validationMethods, observableValue, defaultMessage, translator, parent)
 
   if validateChildren
-    promises.push performChildrenValidations(children, resetValidation)
+    promises.push performChildrenValidations(children, resetValidation, target)
   else
     promises.push newPromise([])
 
@@ -33,12 +34,12 @@ module.exports = performValidation = (options, callback)->
   .spread (ownErrors)->
     if callback then callback(ownErrors)
     else return ownErrors
-  .fail (error)=>
+  .fail (error)->
     logger.error error
     callback [defaultMessage]
   .done()
 
-performOwnValidations = (rules, validationMethods, observableValue, defaultMessage, translator)->
+performOwnValidations = (rules, validationMethods, observableValue, defaultMessage, translator, parent)->
   observableOptions = _.clone(defaultValidationObservableOptions)
   if _.isObject rules?.options
     observableOptions = _.extend observableOptions, rules.options
@@ -53,7 +54,7 @@ performOwnValidations = (rules, validationMethods, observableValue, defaultMessa
     rule = entry.rule
     ruleOptions = entry.ruleOptions
 
-    promise = createValidationPromise(rule, ruleOptions, validationMethods, observableValue)
+    promise = createValidationPromise(rule, ruleOptions, validationMethods, observableValue, parent)
     if not promise then return executeNextValidation()
     else
       return promise.then (result)->
@@ -67,23 +68,24 @@ performOwnValidations = (rules, validationMethods, observableValue, defaultMessa
   executeNextValidation().then ()->
     return _.filter errors, (error)-> return error?
 
-performChildrenValidations = (children, resetValidation)->
+performChildrenValidations = (children, resetValidation, parent)->
   promises = []
   for child in children
     if _.isFunction child?.validate
-      promises.push Promise.nfcall child.validate, {reset: resetValidation, validateChildren: false}
+      promises.push Promise.nfcall child.validate, {reset: resetValidation, validateChildren: false, parent: parent}
 
   if !promises?.length then return newPromise([])
   newPromise(promises)
   .all()
 
 
-createValidationPromise = (rule, ruleOptions, validationMethods, observableValue)->
+createValidationPromise = (rule, ruleOptions, validationMethods, observableValue, parent)->
   ruleOptsOrFn = validationMethods[rule]
   if _.isFunction ruleOptsOrFn
     return Promise.fcall ruleOptsOrFn,
       value: observableValue
       validationOptions: ruleOptions
+      parent: parent
 
   else if _.isFunction ruleOptsOrFn?.fn
     async = ruleOptsOrFn.async or false
@@ -91,10 +93,12 @@ createValidationPromise = (rule, ruleOptions, validationMethods, observableValue
       return Promise.fcall ruleOptsOrFn.fn,
         value: observableValue
         validationOptions: ruleOptions
+        parent: parent
     else
       return Promise.nfcall ruleOptsOrFn.fn,
         value: observableValue
         validationOptions: ruleOptions
+        parent: parent
   else
     logger.warn "Validation Method with name #{rule} doesnt exist" if rule isnt "options"
     return undefined
