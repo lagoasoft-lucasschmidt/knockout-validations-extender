@@ -58,13 +58,16 @@ performOwnValidations = (rules, validationMethods, observableValue, defaultMessa
     promise = createValidationPromise(rule, ruleOptions, validationMethods, observableValue, parent, container)
     if not promise then return executeNextValidation()
     else
-      return promise.then (result)->
+      handler = (result)->
         if !result
           msg = ruleOptions?.message or validationMethods[rule]?.defaultMessage or defaultMessage
           errors.push translator(msg, ruleOptions)
         if errors?.length and observableOptions.stopOnFirstError
           return newPromise()
         else return executeNextValidation()
+      return promise.then handler, (err)->
+        logger.error err
+        return handler(false)
 
   executeNextValidation().then ()->
     return _.filter errors, (error)-> return error?

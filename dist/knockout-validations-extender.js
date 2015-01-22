@@ -292,7 +292,7 @@ performOwnValidations = function(rules, validationMethods, observableValue, defa
     return _results;
   })()).reverse();
   executeNextValidation = function() {
-    var entry, promise;
+    var entry, handler, promise;
     if (!(stack != null ? stack.length : void 0)) {
       return newPromise();
     }
@@ -303,7 +303,7 @@ performOwnValidations = function(rules, validationMethods, observableValue, defa
     if (!promise) {
       return executeNextValidation();
     } else {
-      return promise.then(function(result) {
+      handler = function(result) {
         var msg, _ref;
         if (!result) {
           msg = (ruleOptions != null ? ruleOptions.message : void 0) || ((_ref = validationMethods[rule]) != null ? _ref.defaultMessage : void 0) || defaultMessage;
@@ -314,6 +314,10 @@ performOwnValidations = function(rules, validationMethods, observableValue, defa
         } else {
           return executeNextValidation();
         }
+      };
+      return promise.then(handler, function(err) {
+        logger.error(err);
+        return handler(false);
       });
     }
   };
