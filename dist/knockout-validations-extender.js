@@ -81,15 +81,15 @@ module.exports = function(options) {
       });
     };
     target.resetValidation = function() {
-      var child, _i, _len, _ref, _results;
+      var childDescriptor, _i, _len, _ref, _ref1, _results;
       ownCalculatedErrors([]);
       ownManualErrors([]);
       _ref = children();
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        child = _ref[_i];
-        if (_.isFunction(child != null ? child.validate : void 0)) {
-          _results.push(child.resetValidation());
+        childDescriptor = _ref[_i];
+        if (_.isFunction(childDescriptor != null ? (_ref1 = childDescriptor.child) != null ? _ref1.validate : void 0 : void 0)) {
+          _results.push(childDescriptor.child.resetValidation());
         } else {
           _results.push(void 0);
         }
@@ -110,7 +110,8 @@ module.exports = function(options) {
         resetValidation: (opts != null ? opts.reset : void 0) || false,
         validateChildren: (opts != null ? opts.validateChildren : void 0) || true,
         translator: translator,
-        parent: (opts != null ? opts.parent : void 0) || null
+        parent: (opts != null ? opts.parent : void 0) || null,
+        container: (opts != null ? opts.container : void 0) || null
       }, function(ownErrors) {
         ownCalculatedErrors(_.uniq(ownErrors));
         return cb(target.isValid());
@@ -233,7 +234,7 @@ defaultValidationObservableOptions = {
 };
 
 module.exports = performValidation = function(options, callback) {
-  var children, defaultMessage, observableValue, parent, promises, resetValidation, rules, target, translator, validateChildren, validationMethods;
+  var children, container, defaultMessage, observableValue, parent, promises, resetValidation, rules, target, translator, validateChildren, validationMethods;
   validationMethods = (options != null ? options.validationMethods : void 0) || {};
   translator = (options != null ? options.translator : void 0) || (function() {
     throw new Error("translator should have been set");
@@ -248,11 +249,12 @@ module.exports = performValidation = function(options, callback) {
   resetValidation = options != null ? options.resetValidation : void 0;
   validateChildren = options != null ? options.validateChildren : void 0;
   parent = options != null ? options.parent : void 0;
+  container = options != null ? options.container : void 0;
   if (resetValidation) {
     target.resetValidation();
   }
   promises = [];
-  promises.push(performOwnValidations(rules, validationMethods, observableValue, defaultMessage, translator, parent));
+  promises.push(performOwnValidations(rules, validationMethods, observableValue, defaultMessage, translator, parent, container));
   if (validateChildren) {
     promises.push(performChildrenValidations(children, resetValidation, target));
   } else {
@@ -270,7 +272,7 @@ module.exports = performValidation = function(options, callback) {
   }).done();
 };
 
-performOwnValidations = function(rules, validationMethods, observableValue, defaultMessage, translator, parent) {
+performOwnValidations = function(rules, validationMethods, observableValue, defaultMessage, translator, parent, container) {
   var errors, executeNextValidation, observableOptions, rule, ruleOptions, stack;
   observableOptions = _.clone(defaultValidationObservableOptions);
   if (_.isObject(rules != null ? rules.options : void 0)) {
@@ -297,7 +299,7 @@ performOwnValidations = function(rules, validationMethods, observableValue, defa
     entry = stack.pop();
     rule = entry.rule;
     ruleOptions = entry.ruleOptions;
-    promise = createValidationPromise(rule, ruleOptions, validationMethods, observableValue, parent);
+    promise = createValidationPromise(rule, ruleOptions, validationMethods, observableValue, parent, container);
     if (!promise) {
       return executeNextValidation();
     } else {
@@ -323,15 +325,17 @@ performOwnValidations = function(rules, validationMethods, observableValue, defa
 };
 
 performChildrenValidations = function(children, resetValidation, parent) {
-  var child, promises, _i, _len;
+  var child, childDescriptor, promises, _i, _len;
   promises = [];
   for (_i = 0, _len = children.length; _i < _len; _i++) {
-    child = children[_i];
+    childDescriptor = children[_i];
+    child = childDescriptor.child;
     if (_.isFunction(child != null ? child.validate : void 0)) {
       promises.push(Promise.nfcall(child.validate, {
         reset: resetValidation,
         validateChildren: false,
-        parent: parent
+        parent: parent,
+        container: childDescriptor.container
       }));
     }
   }
@@ -341,14 +345,15 @@ performChildrenValidations = function(children, resetValidation, parent) {
   return newPromise(promises).all();
 };
 
-createValidationPromise = function(rule, ruleOptions, validationMethods, observableValue, parent) {
+createValidationPromise = function(rule, ruleOptions, validationMethods, observableValue, parent, container) {
   var async, ruleOptsOrFn;
   ruleOptsOrFn = validationMethods[rule];
   if (_.isFunction(ruleOptsOrFn)) {
     return Promise.fcall(ruleOptsOrFn, {
       value: observableValue,
       validationOptions: ruleOptions,
-      parent: parent
+      parent: parent,
+      container: container
     });
   } else if (_.isFunction(ruleOptsOrFn != null ? ruleOptsOrFn.fn : void 0)) {
     async = ruleOptsOrFn.async || false;
@@ -356,13 +361,15 @@ createValidationPromise = function(rule, ruleOptions, validationMethods, observa
       return Promise.fcall(ruleOptsOrFn.fn, {
         value: observableValue,
         validationOptions: ruleOptions,
-        parent: parent
+        parent: parent,
+        container: container
       });
     } else {
       return Promise.nfcall(ruleOptsOrFn.fn, {
         value: observableValue,
         validationOptions: ruleOptions,
-        parent: parent
+        parent: parent,
+        container: container
       });
     }
   } else {
@@ -419,10 +426,11 @@ module.exports.collectChildrenErrors = collectChildrenErrors = function(children
 };
 
 module.exports.collectChildrenObservableErrors = collectChildrenObservableErrors = function(children, errorsFnName) {
-  var childrenObservable, errors, _i, _len;
+  var childDescriptor, childrenObservable, errors, _i, _len;
   errors = [];
   for (_i = 0, _len = children.length; _i < _len; _i++) {
-    childrenObservable = children[_i];
+    childDescriptor = children[_i];
+    childrenObservable = childDescriptor.child;
     if (_.isFunction(childrenObservable != null ? childrenObservable[errorsFnName] : void 0)) {
       errors = errors.concat(childrenObservable[errorsFnName]());
     }
@@ -434,7 +442,10 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
   var iteratePossibleChildObservable, key, observableValue, possibleObservable, value, _i, _len, _results, _results1;
   iteratePossibleChildObservable = function(possibleObservable) {
     if (ko.isObservable(possibleObservable) || isObservableArray(possibleObservable)) {
-      return iterator(possibleObservable);
+      return iterator({
+        child: possibleObservable,
+        container: target
+      });
     } else if (_.isArray(possibleObservable) || _.isObject(possibleObservable)) {
       return iterateChildrenObservable(possibleObservable, iterator);
     }

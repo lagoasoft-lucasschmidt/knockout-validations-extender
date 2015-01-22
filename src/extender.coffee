@@ -66,8 +66,8 @@ module.exports = (options)->
     target.resetValidation = ()->
       ownCalculatedErrors []
       ownManualErrors []
-      for child in children()
-        if _.isFunction(child?.validate) then child.resetValidation()
+      for childDescriptor in children()
+        if _.isFunction(childDescriptor?.child?.validate) then childDescriptor.child.resetValidation()
 
     # action
 
@@ -86,6 +86,7 @@ module.exports = (options)->
         validateChildren: opts?.validateChildren or true
         translator: translator
         parent: opts?.parent or null
+        container: opts?.container or null
       ), (ownErrors)->
         ownCalculatedErrors _.uniq(ownErrors)
         cb(target.isValid())

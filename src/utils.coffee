@@ -25,7 +25,8 @@ module.exports.collectChildrenErrors = collectChildrenErrors = (childrenErrors)-
 
 module.exports.collectChildrenObservableErrors = collectChildrenObservableErrors = (children, errorsFnName)->
   errors = []
-  for childrenObservable in children
+  for childDescriptor in children
+    childrenObservable = childDescriptor.child
     if _.isFunction(childrenObservable?[errorsFnName])
       errors = errors.concat childrenObservable[errorsFnName]()
   return errors
@@ -34,7 +35,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = (target, 
 
   iteratePossibleChildObservable = (possibleObservable)->
     if ko.isObservable(possibleObservable) or isObservableArray(possibleObservable)
-      iterator(possibleObservable)
+      iterator({child: possibleObservable, container: target})
     else if _.isArray(possibleObservable) or _.isObject(possibleObservable)
       iterateChildrenObservable(possibleObservable, iterator)
 
