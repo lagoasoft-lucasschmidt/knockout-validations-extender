@@ -45,6 +45,7 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = (target, 
     iteratePossibleChildObservable(possibleObservable) for possibleObservable in observableValue
 
   else if _.isObject observableValue
-    iteratePossibleChildObservable(value) for key, value of observableValue
+
+    iteratePossibleChildObservable(observableValue[key]) for key in _.keys(observableValue) when observableValue.hasOwnProperty(key)
 
 

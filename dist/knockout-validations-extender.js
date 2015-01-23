@@ -443,7 +443,7 @@ module.exports.collectChildrenObservableErrors = collectChildrenObservableErrors
 };
 
 module.exports.iterateChildrenObservable = iterateChildrenObservable = function(target, iterator) {
-  var iteratePossibleChildObservable, key, observableValue, possibleObservable, value, _i, _len, _results, _results1;
+  var iteratePossibleChildObservable, key, observableValue, possibleObservable, _i, _j, _len, _len1, _ref, _results, _results1;
   iteratePossibleChildObservable = function(possibleObservable) {
     if (ko.isObservable(possibleObservable) || isObservableArray(possibleObservable)) {
       return iterator({
@@ -463,10 +463,13 @@ module.exports.iterateChildrenObservable = iterateChildrenObservable = function(
     }
     return _results;
   } else if (_.isObject(observableValue)) {
+    _ref = _.keys(observableValue);
     _results1 = [];
-    for (key in observableValue) {
-      value = observableValue[key];
-      _results1.push(iteratePossibleChildObservable(value));
+    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+      key = _ref[_j];
+      if (observableValue.hasOwnProperty(key)) {
+        _results1.push(iteratePossibleChildObservable(observableValue[key]));
+      }
     }
     return _results1;
   }
