@@ -90,6 +90,7 @@ module.exports = (options)->
       ), (ownErrors)->
         ownCalculatedErrors _.uniq(ownErrors)
         cb(target.isValid())
+        return # added to avoid problems when returning a promise inside callback, crazy chain memory leak
 
     # utils
 

@@ -114,7 +114,7 @@ module.exports = function(options) {
         container: (opts != null ? opts.container : void 0) || null
       }, function(ownErrors) {
         ownCalculatedErrors(_.uniq(ownErrors));
-        return cb(target.isValid());
+        cb(target.isValid());
       });
     };
     target.hasValidation = function(rule) {
