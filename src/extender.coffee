@@ -104,7 +104,9 @@ module.exports = (options)->
 
     target.validation = (newRule, options)->
       if !newRule then return target
-      rules()[newRule] = options or {}
+      allRules = rules()
+      allRules[newRule] = options or {}
+      rules(allRules)
       return target
 
     if live

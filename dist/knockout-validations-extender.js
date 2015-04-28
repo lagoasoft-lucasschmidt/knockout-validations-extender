@@ -130,10 +130,13 @@ module.exports = function(options) {
       return target;
     };
     target.validation = function(newRule, options) {
+      var allRules;
       if (!newRule) {
         return target;
       }
-      rules()[newRule] = options || {};
+      allRules = rules();
+      allRules[newRule] = options || {};
+      rules(allRules);
       return target;
     };
     if (live) {
