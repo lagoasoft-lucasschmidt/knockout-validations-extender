@@ -139,8 +139,8 @@ module.exports = function(options) {
       rules(allRules);
       return target;
     };
-    target.setValidations = function(rules) {
-      rules(rules || {});
+    target.setValidations = function(allRules) {
+      rules(allRules || {});
       return target;
     };
     if (live) {

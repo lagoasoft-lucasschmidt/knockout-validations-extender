@@ -109,8 +109,8 @@ module.exports = (options)->
       rules(allRules)
       return target
 
-    target.setValidations = (rules)->
-      rules(rules or {})
+    target.setValidations = (allRules)->
+      rules(allRules or {})
       return target
 
     if live
