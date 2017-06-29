@@ -139,6 +139,10 @@ module.exports = function(options) {
       rules(allRules);
       return target;
     };
+    target.setValidations = function(rules) {
+      rules(rules || {});
+      return target;
+    };
     if (live) {
       rules.subscribe(function(newRule) {
         return _.defer(function() {

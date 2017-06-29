@@ -221,6 +221,8 @@ You can override the default error message by passing as a validation option in 
   + if its live, it should trigger a new validation
 - observable.removeValidation(name)
   + removes validation
+- observable.setValidations(rules)
+  + replaces all validations with new object definition with rules
 
 # Extender Modes (Available extenders)
 
@@ -243,7 +245,7 @@ The validations you register are an object that maps a ``validationName`` to a `
   + validationOptions (the options configured for this observable/validation by you)
   + parent (parent observable that called the validate method)
   + container (object that contains the current observable being evaluated.)
-    * Eg: if you had an observableArray, that contains objects, that have a field observable, you could access the parent observableArray and the container object to validate that field. 
+    * Eg: if you had an observableArray, that contains objects, that have a field observable, you could access the parent observableArray and the container object to validate that field.
 
 ```
 koValidations = require 'knockout-validations-extender'

@@ -109,6 +109,10 @@ module.exports = (options)->
       rules(allRules)
       return target
 
+    target.setValidations = (rules)->
+      rules(rules or {})
+      return target
+
     if live
       # when rules change, validate if hasnt started yet
 
